@@ -1,0 +1,26 @@
+Bir firmanın birden fazla şubesi vardır
+Bir şubenin yalnızca bir firması vardır 
+
+Bir şubenin birden fazla personeli vardır
+Bir personel yalnızca bir şubede çalışır 
+
+Bir müşteri hizmetlerinin yalnızca bir iletişim bilgisi vardır
+İletişim bilgileri birden fazla müşteri hizmetlerinde vardır 
+
+Bir satış temsilcisi birden fazla ürün satabilir
+Bir ürün birden fazla satış temsilcisi tarafından satılabilir 
+
+Bir müşteri birden fazla sipariş verebilir
+Bir sipariş yalnızca bir müşteri tarafından verilebilir 
+
+Bir ürünün yalnızca bir kategorisi vardır
+Bir kategoride birden fazla ürün olabilir 
+
+Bir ürün birden fazla depodan gelebilir
+Bir depoda birden fazla ürün vardır 
+
+Bir şoför yalnızca bir araç sürebilir
+Bir aracı birden fazla şoför sürebilir 
+
+Bir araç birden fazla kargo getirebilir
+Bir kargo yalnızca bir araç tarafından gelebilir

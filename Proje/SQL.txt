@@ -1,0 +1,348 @@
+CREATE TABLE "public"."firma" ( 
+	"firma_id" SERIAL primary key,
+	"firma_adi" CHARACTER VARYING(40) NOT NULL
+);
+
+CREATE TABLE "public"."sube" ( 
+	"sube_id" SERIAL primary key,
+	"firma_id" INT NOT NULL,
+	"bolge" CHARACTER VARYING(40) NOT NULL,
+	"personel_sayisi" INT NOT NULL,
+	CONSTRAINT "sube_fk" FOREIGN KEY("firma_id") REFERENCES "public"."firma"("firma_id")
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+	
+);
+
+CREATE SCHEMA "personel";
+
+CREATE TABLE "personel"."personel" ( 
+	"personel_id" SERIAL primary key,
+	"personel_adi" CHARACTER VARYING(40) NOT NULL,
+	"personel_soyadi" CHARACTER VARYING(40) NOT NULL,
+	"mail" CHARACTER VARYING(50) NOT NULL,
+	"personel_turu" CHARACTER VARYING(3) NOT NULL,
+	"sube_id" integer,
+	CONSTRAINT "personel_fk" FOREIGN KEY("sube_id") REFERENCES "public"."sube"("sube_id")
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+CREATE TABLE "public"."iletisim" ( 
+	"iletisim_id" SERIAL primary key,
+	"tel" CHARACTER VARYING(13) NOT NULL,
+	"mail" CHARACTER VARYING(40) NOT NULL
+);
+
+CREATE TABLE "public"."arac" ( 
+	"arac_id" SERIAL primary key,
+	"arac_adi" CHARACTER VARYING(20) NOT NULL,
+	"arac_modeli" CHARACTER VARYING(5) NOT NULL
+);
+
+CREATE TABLE "public"."depo" ( 
+	"depo_id" SERIAL primary key,
+	"bolge" CHARACTER VARYING(20) NOT NULL
+);
+
+CREATE TABLE "public"."kategori" ( 
+	"kategori_id" SERIAL primary key,
+	"kategori_adi" CHARACTER VARYING(20) NOT NULL
+);
+
+CREATE TABLE "public"."musteri" ( 
+	"musteri_id" SERIAL primary key,
+	"musteri_adi" CHARACTER VARYING(15) NOT NULL,
+	"musteri_soyadi" CHARACTER VARYING(15) NOT NULL,
+	"adres" CHARACTER VARYING(40) NOT NULL
+);
+
+CREATE TABLE "public"."kargo" (
+    "kargo_id" serial NOT NULL primary key,
+    "arac_id" INT NOT NULL,
+	"depo_id" INT NOT NULL,
+	"sube_id" INT NOT NULL,
+	CONSTRAINT "kargo_fk1" FOREIGN KEY("arac_id") REFERENCES "public"."arac"("arac_id"),
+	CONSTRAINT "kargo_fk2" FOREIGN KEY("depo_id") REFERENCES "public"."depo"("depo_id"),
+	CONSTRAINT "kargo_fk3" FOREIGN KEY("sube_id") REFERENCES "public"."sube"("sube_id")
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+CREATE TABLE "personel"."satis_temsilcisi" ( 
+	"personel_id" INT primary key,
+	"mesai" INT NOT NULL,
+	"maas" INT NOT NULL
+);
+
+CREATE TABLE "personel"."sofor" ( 
+	"personel_id" INT primary key,
+	"arac_id" INT NOT NULL,
+	CONSTRAINT "sofor_fk" FOREIGN KEY("arac_id") REFERENCES "public"."arac"("arac_id")
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+CREATE TABLE "personel"."musteri_hizmetleri" ( 
+	"personel_id" INT primary key,
+	"iletisim_id" INT NOT NULL,
+	CONSTRAINT "musteri_hizmetleri_fk" FOREIGN KEY("iletisim_id") REFERENCES "public"."iletisim"("iletisim_id")
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+CREATE TABLE "personel"."mudur" ( 
+	"personel_id" INT primary key
+);
+
+CREATE TABLE "public"."urun" (
+    "urun_id" serial NOT NULL primary key,
+	"urun_adi" CHARACTER VARYING(20) NOT NULL,
+	"stok" INT NOT NULL,
+	"kategori_id" INT NOT NULL,
+    "kargo_id" INT NOT NULL,
+	"sube_id" INT NOT NULL,
+	CONSTRAINT "urun_fk1" FOREIGN KEY("kategori_id") REFERENCES "public"."kategori"("kategori_id"),
+	CONSTRAINT "urun_fk2" FOREIGN KEY("kargo_id") REFERENCES "public"."kargo"("kargo_id"),
+	CONSTRAINT "urun_fk3" FOREIGN KEY("sube_id") REFERENCES "public"."sube"("sube_id")
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+
+CREATE TABLE "public"."siparis" (
+    "siparis_id" serial NOT NULL primary key,
+    "personel_id" INT NOT NULL,
+	"urun_id" INT NOT NULL,
+	"musteri_id" INT NOT NULL,
+	CONSTRAINT "siparis_fk1" FOREIGN KEY("personel_id") REFERENCES "personel"."satis_temsilcisi"("personel_id"),
+	CONSTRAINT "siparis_fk2" FOREIGN KEY("urun_id") REFERENCES "public"."urun"("urun_id"),
+	CONSTRAINT "siparis_fk3" FOREIGN KEY("musteri_id") REFERENCES "public"."musteri"("musteri_id")
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+
+
+
+
+--
+-- FONKSİYONLAR
+--
+
+
+
+
+CREATE OR REPLACE FUNCTION MaasHesabi(mesai INT)
+RETURNS INT
+AS
+$$
+DECLARE maas integer;
+BEGIN
+   	
+	maas=mesai*18*30;
+	
+RETURN maas;
+
+END;
+$$
+LANGUAGE plpgsql;
+
+
+
+
+CREATE OR REPLACE FUNCTION SatisTemsilcisiEkle(adi CHARACTER VARYING(40), soyadi CHARACTER VARYING(40),mail character varying(50),tur character(3),sube integer, mesai integer)
+RETURNS void
+AS
+$$
+DECLARE personelid1 integer;
+BEGIN
+   	
+INSERT INTO "personel"."personel"("personel_adi","personel_soyadi","personel_turu","mail","sube_id")
+VALUES (adi,soyadi,tur,mail,sube) RETURNING "personel_id" INTO personelid1;
+
+INSERT INTO "personel"."satis_temsilcisi"("personel_id","mesai","maas")
+VALUES (personelid1 ,mesai,MaasHesabi(mesai));
+
+END;
+$$
+LANGUAGE plpgsql;
+
+
+
+
+CREATE OR REPLACE FUNCTION SoforEkle(adi CHARACTER VARYING(40), soyadi CHARACTER VARYING(40),mail character varying(50),tur character(3),sube integer, aracid integer)
+RETURNS void
+AS
+$$
+DECLARE personelid1 integer;
+BEGIN
+   	
+INSERT INTO "personel"."personel"("personel_adi","personel_soyadi","personel_turu","mail","sube_id")
+VALUES (adi,soyadi,tur,mail,sube) RETURNING "personel_id" INTO personelid1;
+
+INSERT INTO "personel"."sofor"("personel_id","arac_id")
+VALUES (personelid1 ,aracid);
+
+END;
+$$
+LANGUAGE plpgsql;
+
+
+
+
+
+CREATE OR REPLACE FUNCTION MusteriHizmetleriEkle(adi CHARACTER VARYING(40), soyadi CHARACTER VARYING(40),mail character varying(50),tur character(3),sube integer, iletisimid integer)
+RETURNS void
+AS
+$$
+DECLARE personelid1 integer;
+BEGIN
+   	
+INSERT INTO "personel"."personel"("personel_adi","personel_soyadi","personel_turu","mail","sube_id")
+VALUES (adi,soyadi,tur,mail,sube) RETURNING "personel_id" INTO personelid1;
+
+INSERT INTO "personel"."musteri_hizmetleri"("personel_id","iletisim_id")
+VALUES (personelid1 ,iletisimid);
+
+END;
+$$
+LANGUAGE plpgsql;
+
+
+
+
+
+
+CREATE OR REPLACE FUNCTION MudurEkle(adi CHARACTER VARYING(40), soyadi CHARACTER VARYING(40),mail character varying(50),tur character(3),sube integer)
+RETURNS void
+AS
+$$
+DECLARE personelid1 integer;
+BEGIN
+   	
+INSERT INTO "personel"."personel"("personel_adi","personel_soyadi","personel_turu","mail","sube_id")
+VALUES (adi,soyadi,tur,mail,sube) RETURNING "personel_id" INTO personelid1;
+
+INSERT INTO "personel"."mudur"("personel_id")
+VALUES (personelid1 );
+
+END;
+$$
+LANGUAGE plpgsql;
+
+
+
+
+
+--
+-- TRIGGERLAR
+--
+
+
+CREATE OR REPLACE FUNCTION "StokArtis"()
+RETURNS TRIGGER 
+AS
+$$
+BEGIN
+
+	update "urun" set stok=stok+10 where "urun"."sube_id"=(select "kargo"."sube_id" from "kargo" where "kargo"."kargo_id"=(select max("kargo_id") from "kargo"));
+      
+    RETURN NEW;
+END;
+$$
+LANGUAGE "plpgsql";
+
+CREATE TRIGGER "StokArtis"
+after insert on "kargo"
+FOR EACH ROW
+EXECUTE PROCEDURE "StokArtis"();
+
+
+
+
+
+CREATE OR REPLACE FUNCTION "MaasArtis"()
+RETURNS TRIGGER 
+AS
+$$
+BEGIN
+
+	update "personel"."satis_temsilcisi" set maas=maas+15 where "satis_temsilcisi"."personel_id"=(select "personel_id" from "siparis" where "siparis"."siparis_id"=(select max("siparis_id") from "siparis"));
+      
+    RETURN NEW;
+END;
+$$
+LANGUAGE "plpgsql";
+
+CREATE TRIGGER "MaasArtis"
+after insert on "siparis"
+FOR EACH ROW
+EXECUTE PROCEDURE "MaasArtis"();
+
+
+
+
+
+CREATE OR REPLACE FUNCTION "StokAzalıs"()
+RETURNS TRIGGER 
+AS
+$$
+BEGIN
+
+	update "urun" set stok=stok-1 where "urun"."urun_id"=(select "urun_id" from "siparis" where "siparis"."siparis_id"=(select max("siparis_id") from "siparis"));
+      
+    RETURN NEW;
+END;
+$$
+LANGUAGE "plpgsql";
+
+CREATE TRIGGER "StokAzalıs"
+after insert on "siparis"
+FOR EACH ROW
+EXECUTE PROCEDURE "StokAzalıs"();
+
+
+
+
+CREATE OR REPLACE FUNCTION "ToplamCalisan"()
+RETURNS TRIGGER 
+AS
+$$
+BEGIN
+   
+	update "sube" set personel_sayisi=(select count(*) from "personel"."personel");
+    
+    RETURN NEW;
+END;
+$$
+LANGUAGE "plpgsql";
+
+CREATE TRIGGER "ToplamCalisan"
+after insert on "personel"."personel"
+FOR EACH ROW
+EXECUTE PROCEDURE "ToplamCalisan"();
+
+
+
+
+
+--
+--TABLOLARA EKLEME
+--
+
+
+insert into "firma"("firma_adi") values('MediaMarkt');
+insert into "sube"("firma_id","bolge","personel_sayisi") values('1','Tokat','0'),('1','Amasya','0');
+insert into "kategori"("kategori_adi") values('Telefon'),('Bilgisayar'),('Kulaklık');
+insert into "musteri"("musteri_adi","musteri_soyadi","adres") values('Hakan','Yıldırım','Ankara'),('Adem','Kılıççı','İstanbul'),('Haydar','Kara','Bursa'),('Yunus','Çoban','Eskişehir');
+insert into "depo"("bolge") values('Marmara'),('Anadolu');
+insert into "iletisim"("tel","mail") values('05648796254','ddad@gmail.com');
+insert into "arac"("arac_adi","arac_modeli") values('Mercedes','2018'),('Volvo','2021');
+insert into "kargo"("arac_id","depo_id","sube_id") values('1','1','1'),('1','1','1');
+insert into "urun"("urun_adi","stok","kategori_id","kargo_id","sube_id") values('a50','12','1',1,1),('iphone x','21','1',1,1),('acer laptop','36','2',1,1),('a52','28','1',1,1),('sony w200','62','3',1,1);
+
+Select SatisTemsilcisiEkle('Hande','Yağız','hnd@gmail.com','STS',1,'10');
+Select SatisTemsilcisiEkle('Buse','Hilal','bsd@gmail.com','STS',1,'11');
+Select SatisTemsilcisiEkle('Savaş','Cebeci','svsd@gmail.com','STS',1,'9');
+Select SatisTemsilcisiEkle('Gökhan','Korkmaz','gkhn@gmail.com','STS',1,'10');
